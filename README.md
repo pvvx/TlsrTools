@@ -4,10 +4,9 @@ beta version
 
 ![SCH](https://github.com/pvvx/TlsrTools/blob/master/Stm32miniSwireShm.gif)
 
-[Документация на русском языке](https://github.com/pvvx/TlsrTools/blob/master/DOCs)
+[Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ РЅР° СЂСѓСЃСЃРєРѕРј СЏР·С‹РєРµ](https://github.com/pvvx/TlsrTools/blob/master/DOCs)
 
-[Прошивка для STM32F103C8T6](https://github.com/pvvx/TlsrTools/blob/master/STM32F103)
+[РџСЂРѕС€РёРІРєР° РґР»СЏ STM32F103C8T6](https://github.com/pvvx/TlsrTools/blob/master/STM32F103)
 
-[Программа для PC под Windows](https://github.com/pvvx/TlsrTools/blob/master/bin)
-
+[РџСЂРѕРіСЂР°РјРјР° РґР»СЏ PC РїРѕРґ Windows](https://github.com/pvvx/TlsrTools/blob/master/bin)
 
