@@ -10,3 +10,4 @@ beta version
 
 [Программа для PC под Windows](https://github.com/pvvx/TlsrTools/blob/master/bin)
 
+[Форум](https://esp8266.ru/forum/threads/programmator-dlja-tlsr.4587)
