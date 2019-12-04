@@ -154,13 +154,47 @@ _attribute_ram_code_ int main (void) {
 #endif
 	// enable system tick ( clock_time() )
 	reg_system_tick_ctrl = FLD_SYSTEM_TICK_START; //	REG_ADDR8(0x74f) = 0x01;
+#if USE_EXT_FLASH
 
+#define reg_gpio_config_func6   REG_ADDR8(0x5b6)
+#define reg_gpio_config_func(i)		REG_ADDR8(0x5b0 +(i>>8))  	  //5b0 5b1 5b2 5b3 5b4 5b5
+	BM_CLR(reg_gpio_config_func4, (GPIO_PE7)&0xff);   //disable E6/E7 keyscan function   //(GPIO_PE6|GPIO_PE7)
+	BM_CLR(reg_gpio_config_func6, BIT(5));            //disable E6/F0 as uart function
+	BM_CLR(reg_gpio_gpio_func(GPIO_PE7), (GPIO_PE7)&0xff); //disable E7 as gpio
+	BM_CLR(reg_gpio_gpio_func(GPIO_PF0), (GPIO_PF0)&0xff); //disable F0 as gpio
+	BM_CLR(reg_gpio_gpio_func(GPIO_PF1), (GPIO_PF1)&0xff); //disable F1 as gpio
+	BM_SET(reg_gpio_ie(GPIO_PE7), (GPIO_PE7)&0xff); //enable input
+	BM_SET(reg_gpio_ie(GPIO_PF0), (GPIO_PF0)&0xff); //enable input
+	BM_SET(reg_gpio_ie(GPIO_PF1), (GPIO_PF1)&0xff); //enable input
+
+	BM_CLR(reg_gpio_oen(GPIO_PF0), GPIO_PF0 & 0xff); //enable output
+	BM_CLR(reg_gpio_oen(GPIO_PF1), GPIO_PF1 & 0xff); //enable output
+
+	BM_SET(reg_gpio_gpio_func(CS_EXT_FLASH), (CS_EXT_FLASH)&0xff); //enable F1 as gpio
+	BM_CLR(reg_gpio_ie(CS_EXT_FLASH), CS_EXT_FLASH & 0xff); //disable input
+	BM_CLR(reg_gpio_oen(CS_EXT_FLASH), CS_EXT_FLASH & 0xff); //enable output
+
+	BM_SET(reg_spi_sp, FLD_SPI_ENABLE);  //enable spi function. because i2c and spi share part of the hardware in the chip.
+
+	/***set the spi clock. spi_clk = system_clock/((div_clk+1)*2)***/
+	BM_CLR(reg_spi_sp, FLD_MASTER_SPI_CLK);  //clear the spi clock division bits
+//	reg_spi_sp |= MASK_VAL(FLD_MASTER_SPI_CLK, 0 & 0x7f); //set the clock div bits
+	BM_SET(reg_spi_ctrl, FLD_SPI_MASTER_MODE_EN);  //enable spi master mode
+
+	/***config the spi woking mode.For spi mode spec, pls refer to datasheet***/
+	BM_CLR(reg_spi_inv_clk, FLD_INVERT_SPI_CLK|FLD_DAT_DLY_HALF_CLK); //clear the mode bits
+//	BM_SET(reg_spi_inv_clk,  0 &0x03);  //set the mode 0
+#endif
 	/////////////////////////// app floader /////////////////////////////
 	ext.faddr = 0;
 	ext.pbuf = (u32) buff;
 	ext.count = sizeof(buff);
 	ext.cmd = FLASH_GET_JEDEC_ID;
-	ext.iack = 3; // Version, in BCD 0x1234 = 1.2.3.4
+#if USE_EXT_FLASH
+	ext.iack = 0x1003; // Version, in BCD 0x1234 = 1.2.3.4
+#else
+	ext.iack = 0x0003; // Version, in BCD 0x1234 = 1.2.3.4
+#endif
 	ext.oack = 0;
 	u16 ack = 0xffff;
 	while(1) {
@@ -191,6 +225,7 @@ _attribute_ram_code_ int main (void) {
 				break;
 */
 		}
+//		SET_FLD(reg_tmr_ctrl, FLD_CLR_WD); // wd_clear
 		ext.oack++;
 	}
 

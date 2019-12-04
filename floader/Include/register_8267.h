@@ -558,7 +558,7 @@ enum{
 #define reg_ana_data			REG_ADDR8(0xb9)
 #define reg_ana_ctrl			REG_ADDR8(0xba)
 
-// ÎÄµµ²»ÕýÈ·£¬ÇëÊ¹ÓÃÒÔÏÂ¶¨Òå
+// ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½
 enum{
 	FLD_ANA_BUSY  = 			BIT(0),
 	FLD_ANA_RSV	=				BIT(4),
@@ -965,8 +965,8 @@ enum{
 	FLD_PLL_POL_RX_SOF =		BIT(12),
 };
 
-#define reg_rf_rx_cap			REG_ADDR16(0x4f0)		//  µçÈÝ
-#define reg_rf_tx_cap			REG_ADDR16(0x4f0)		//  µçÈÝ
+#define reg_rf_rx_cap			REG_ADDR16(0x4f0)		//  ï¿½ï¿½ï¿½ï¿½
+#define reg_rf_tx_cap			REG_ADDR16(0x4f0)		//  ï¿½ï¿½ï¿½ï¿½
 
 /****************************************************
  dma mac regs struct: begin  addr : 0x500
@@ -1242,11 +1242,12 @@ enum{
 	FLD_GPIO_WAKEUP_EN		=	BIT(2),
 	FLD_GPIO_INTERRUPT_EN	=	BIT(3),
 };
+
 /****************************************************
  timer regs struct: begin  0x620
  *****************************************************/
 #define reg_tmr_ctrl			REG_ADDR32(0x620)
-#define reg_tmr_ctrl16			REG_ADDR16(0x620)		// ÒòÎª0x622 ²»ÒªÐ´
+#define reg_tmr_ctrl16			REG_ADDR16(0x620)		// ï¿½ï¿½Îª0x622 ï¿½ï¿½ÒªÐ´
 #define reg_tmr_ctrl8			REG_ADDR8(0x620)
 enum{
 	FLD_TMR0_EN =				BIT(0),

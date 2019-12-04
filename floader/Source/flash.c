@@ -4,9 +4,12 @@
 
 extern _attribute_ram_code_ void sleep_us (u32 us);
 
+#if USE_EXT_FLASH
+#else
 _attribute_ram_code_ static inline int flash_is_busy(){
 	return mspi_read() & 0x01;				//  the busy bit, pls check flash spec
 }
+#endif
 
 _attribute_ram_code_ static void flash_send_cmd(u8 cmd){
 	mspi_high();
@@ -30,13 +33,24 @@ _attribute_ram_code_ static void flash_wait_done()
 {
 	sleep_us(100);
 	flash_send_cmd(FLASH_READ_STATUS_CMD);
-
+#if USE_EXT_FLASH
+	reg_spi_ctrl |= MASK_VAL(FLD_SPI_RD, 1, FLD_SPI_DATA_OUT_DIS, 1);  //enable read and disable output
+	mspi_get();
+	int i;
+	for(i = 0; i < 10000000; ++i){
+		mspi_wait();
+		if(!(mspi_get() & 0x01)){ //  the busy bit, pls check flash spec
+			break;
+		}
+	}
+#else
 	int i;
 	for(i = 0; i < 10000000; ++i){
 		if(!flash_is_busy()){
 			break;
 		}
 	}
+#endif
 	mspi_high();
 }
 
@@ -62,7 +76,9 @@ _attribute_ram_code_ void flash_write_page(u32 addr, u32 len, u8 *buf){
 #if USE_IRQ_SAVE
 	u8 r = irq_disable();
 #endif
-
+#if USE_EXT_FLASH
+	BM_CLR(reg_spi_ctrl, BIT(5) | FLD_SPI_DATA_OUT_DIS | FLD_SPI_RD); //enable output, enable write, disabling share mode
+#endif
 	// important:  buf must not reside at flash, such as constant string.  If that case, pls copy to memory first before write
 	flash_send_cmd(FLASH_WRITE_ENABLE_CMD);
 	flash_send_cmd(FLASH_WRITE_CMD);
@@ -85,13 +101,19 @@ _attribute_ram_code_ void flash_read_page(u32 addr, u32 len, u8 *buf){
 #if USE_IRQ_SAVE
 	u8 r = irq_disable();
 #endif
-
+#if USE_EXT_FLASH
+	BM_CLR(reg_spi_ctrl, BIT(5) | FLD_SPI_DATA_OUT_DIS | FLD_SPI_RD); //enable output, enable write
+#endif
 	flash_send_cmd(FLASH_READ_CMD);
 	flash_send_addr(addr);
-
+#if USE_EXT_FLASH
+	reg_spi_ctrl |= MASK_VAL(FLD_SPI_RD, 1, FLD_SPI_DATA_OUT_DIS, 1);  //enable read and disable output
+	mspi_get();
+#else
 	mspi_write(0x00);		/* dummy,  to issue clock */
 	mspi_wait();
 	mspi_ctrl_write(0x0a);	/* auto mode */
+#endif
 	mspi_wait();
 	/* get data */
 	u32 i;
@@ -111,10 +133,24 @@ _attribute_ram_code_ u32 flash_get_jedec_id(){
 #if USE_IRQ_SAVE
 	u8 r = irq_disable();
 #endif
+#if USE_EXT_FLASH
+	BM_CLR(reg_spi_ctrl, BIT(5) | FLD_SPI_DATA_OUT_DIS | FLD_SPI_RD); //enable output, enable write
+#endif
 	flash_send_cmd(FLASH_GET_JEDEC_ID);
+#if USE_EXT_FLASH
+	reg_spi_ctrl |= MASK_VAL(FLD_SPI_RD, 1, FLD_SPI_DATA_OUT_DIS, 1);  //enable read and disable output
+	mspi_get();
+	mspi_wait();
+	u8 manufacturer = mspi_get();
+	mspi_wait();
+	u8 mem_type = mspi_get();
+	mspi_wait();
+	u8 cap_id = mspi_get();
+#else
 	u8 manufacturer = mspi_read();
 	u8 mem_type = mspi_read();
 	u8 cap_id = mspi_read();
+#endif
 	mspi_high();
 #if USE_IRQ_SAVE
 	irq_restore(r);
