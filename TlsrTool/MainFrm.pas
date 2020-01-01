@@ -136,6 +136,8 @@ type
     EditSTMSpeed: TEdit;
     LabelSWM: TLabel;
     LabelDevID: TLabel;
+    ButtonAWrite: TButton;
+    ButtonARdAll: TButton;
     procedure ReScanComDevices;
     procedure ButtonReScanComDevicesClick(Sender: TObject);
 //    procedure CloseChkGPIO;
@@ -153,6 +155,7 @@ type
     function StmCmdActivate : boolean;
     function StmCmdVersion : boolean;
     function StmRdRegs : boolean;
+    function ARegEnable : boolean;
     function SwireCpuStop : boolean;
     function SwireFlashSetCsHigh : boolean;
     function SwireFlashSectorErase(faddr: Dword) : boolean;
@@ -260,6 +263,8 @@ type
     procedure ShapePA15MouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure ButtonAnaReadClick(Sender: TObject);
+    procedure ButtonAWriteClick(Sender: TObject);
+    procedure ButtonARdAllClick(Sender: TObject);
   private
     { Private declarations }
 
@@ -554,6 +559,8 @@ begin
           ButtonFFRead.Enabled := True;
           ButtonSFWrite.Enabled := True;
           ButtonAnaRead.Enabled := True;
+          ButtonAWrite.Enabled := True;
+          ButtonARdAll.Enabled := True;
           flgReadGpioOn := True;
 end;
 
@@ -581,6 +588,8 @@ begin
      ButtonFFRead.Enabled := False;
      ButtonSFWrite.Enabled := False;
      ButtonAnaRead.Enabled := False;
+     ButtonAWrite.Enabled := False;
+     ButtonARdAll.Enabled := False;
      if flgComOpen then
           PurgeCom(PURGE_TXCLEAR or PURGE_RXCLEAR);
 end;
@@ -2829,57 +2838,171 @@ begin
       end;
 end;
 
+function TfrmMain.ARegEnable : boolean;
+begin
+    result := False;
+    if SwireRead($0061,1) then begin
+      if SwireWrite($0061, swdata[$61] and $fd, 1) then begin
+        if SwireRead($0064,1) then begin
+          if SwireWrite($0064, swdata[$64] or $02, 1) then begin
+            result := True;
+          end;
+        end;
+      end;
+    end;
+end;
+
+
 procedure TfrmMain.ButtonAnaReadClick(Sender: TObject);
 var
-  bfile : THandle;
-  aaddr, bufaddr, buflen, blksz : DWORD;
+  i : integer;
+  regaddr, regdata : DWORD;
 begin
     MenuDisable;
-    SigBreak := False;
-
-    ConnectStartTime := GetTickCount();
-    if not StartFLoader then begin
-       MenuEnable;
-       exit;
+     if not ARegEnable then begin
+         StatusBar.Panels[1].Text:='Ошибка активации ALGM!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
+     end;
+    regaddr := Str2dword(EditRegAddr.Text) and $ff;
+    EditRegAddr.Text := '0x'+IntToHex(regaddr,2);
+//    regdata := Str2dword(EditRegData.Text);
+//    EditRegData.Text := '0x'+IntToHex(regdata,8);
+    StatusBar.Panels[1].Text:='Чтение регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+    if not SwireWrite($b8, (regaddr and $ff) or $40ff00, 3) then begin
+         StatusBar.Panels[1].Text:='Ошибка записи по адресу 0x00B8!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
     end;
-    aaddr := 0;
-    buflen := 256;
-      StatusBar.Panels[1].Text:='Чтение регистров analog controls по адресу 0x'+ IntToHex(aaddr, 5)+'...';
-      ext.faddr := aaddr;
-      ext.count := buflen;
-      ext.cmd := $F4;
-      if (not CommandFLoader)
-       or (not WaitCommandFLoader) then begin
+    i := 3;
+    while (i > 0) do begin
+      if not SwireRead($b9, 2) then begin
+        StatusBar.Panels[1].Text:='Ошибка чтения по адресу 0x00B9!';
+        ShowMessage(StatusBar.Panels[1].Text);
+        MenuEnable;
+        exit;
+      end;
+      if (swdata[$ba] and 1) = 0 then begin
+        regdata := swdata[$b9];
+        SwireWrite($ba,0,1);
+        EditRegData.Text := '0x'+IntToHex(regdata,2);
+        StatusBar.Panels[1].Text:='Считано 0x'+ IntToHex(regdata, 2)+' из регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+        MenuEnable;
+        exit;
+      end;
+      Dec(i);
+    end;
+    StatusBar.Panels[1].Text:='Ошибка чтения регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+    ShowMessage(StatusBar.Panels[1].Text);
+    MenuEnable;
+end;
+
+procedure TfrmMain.ButtonAWriteClick(Sender: TObject);
+var
+  i : integer;
+  regaddr, regdata : DWORD;
+begin
+    MenuDisable;
+     if not ARegEnable then begin
+         StatusBar.Panels[1].Text:='Ошибка активации ALGM!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
+     end;
+//    SwireCpuStop;
+    regaddr := Str2dword(EditRegAddr.Text) and $ff;
+    EditRegAddr.Text := '0x'+IntToHex(regaddr,2);
+    regdata := Str2dword(EditRegData.Text) and $ff;
+    EditRegData.Text := '0x'+IntToHex(regdata,2);
+    StatusBar.Panels[1].Text:='Запись регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+    if not SwireWrite($b8, (regaddr and $ff) or $600000 or (regdata shl 8), 3) then begin
+         StatusBar.Panels[1].Text:='Ошибка записи по адресу 0x00B8!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
+    end;
+    i := 3;
+    while (i > 0) do begin
+      if not SwireRead($b9, 2) then begin
+        StatusBar.Panels[1].Text:='Ошибка чтения по адресу 0x00B9!';
+        ShowMessage(StatusBar.Panels[1].Text);
+        MenuEnable;
+        exit;
+      end;
+      if (swdata[$ba] and 1) = 0 then begin
+//        regdata := swdata[$b9];
+        SwireWrite($ba, 0, 1);
+//        SwireWrite( $0602, $88, 1);// cpu go
+        EditRegData.Text := '0x'+IntToHex(regdata,2);
+//        StatusBar.Panels[1].Text:='Считано 0x'+ IntToHex(regdata, 2)+' из регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+        StatusBar.Panels[1].Text:='Записано 0x'+ IntToHex(regdata, 2)+' в регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+        MenuEnable;
+        exit;
+      end;
+      Dec(i);
+    end;
+    StatusBar.Panels[1].Text:='Ошибка чтения регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+    ShowMessage(StatusBar.Panels[1].Text);
+    MenuEnable;
+end;
+
+procedure TfrmMain.ButtonARdAllClick(Sender: TObject);
+var
+i : integer;
+regaddr : Dword;
+bfile : THandle;
+adata : array[0..255] of byte;
+begin
+  MenuDisable;
+  SigBreak := False;
+     ConnectStartTime := GetTickCount();
+     StatusBar.Panels[1].Text:='Чтение analog регистров...';
+     if not ARegEnable then begin
+         StatusBar.Panels[1].Text:='Ошибка активации ALGM!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
+     end;
+     regaddr := 0;
+     while regaddr < $100 do begin
+       StatusBar.Panels[1].Text:='Чтение регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+       if not SwireWrite($b8, (regaddr and $ff) or $40ff00, 3) then begin
+         StatusBar.Panels[1].Text:='Ошибка записи по адресу 0x00B8!';
+         ShowMessage(StatusBar.Panels[1].Text);
          MenuEnable;
          exit;
        end;
-       bufaddr := 0;
-       blksz := 32;
-       while bufaddr < buflen do begin
-         if bufaddr - buflen < blksz then blksz := bufaddr - buflen;
-//         StatusBar.Panels[1].Text:='Чтение блока по адресу 0x'+ IntToHex(fcaddr, 5)+'..';
-         if not SwireRead((ext.pbuf and $ffff) + bufaddr, blksz) then begin
-           StatusBar.Panels[1].Text:='Ошибки чтения блока по адресу 0x'+ IntToHex((ext.pbuf and $ffff) + bufaddr, 5)+' !';
+       i := 3;
+       while (i > 0) do begin
+         if not SwireRead($b9, 2) then begin
+           StatusBar.Panels[1].Text:='Ошибка чтения по адресу 0x00B9!';
            ShowMessage(StatusBar.Panels[1].Text);
            MenuEnable;
            exit;
          end;
-         bufaddr := bufaddr + blksz;
-         Application.ProcessMessages;
-         if SigBreak then begin
-           StatusBar.Panels[1].Text:='Чтение блока Flash по адресу 0x'+ IntToHex(aaddr, 5)+' прервано!';
-           SigBreak := False;
-           MenuEnable;
-           exit;
+         if (swdata[$ba] and 1) = 0 then begin
+           SwireWrite($ba,0,1);
+           adata[regaddr] := swdata[$b9];
+//           StatusBar.Panels[1].Text:='Считано 0x'+ IntToHex(regdata, 2)+' из регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+           regaddr := regaddr + 1;
+           break;
          end;
-       end;
-
-    ConnectTime := GetTickCount() - ConnectStartTime;
-//     StatusBar.Panels[1].Text:='Чтение '+IntToStr(frdlen)+' байт - ок. (' + IntToStr(ConnectTime) + ' мс)';
-    StatusBar.Panels[1].Text:='Считано '+ IntToStr(buflen)+' байт из analog controls по адресу 0x00000: '+BufToHex_Str(@swdata[ext.pbuf and $ffff], 4, ',' )+',.. (' + IntToStr(ConnectTime) + ' мс)';
-    with SaveDialog do begin
+         Dec(i);
+      end;
+      if i = 0 then begin
+        SwireWrite($ba,0,1);
+        StatusBar.Panels[1].Text:='Ошибка чтения регистра analog controls по адресу 0x'+ IntToHex(regaddr, 2);
+        ShowMessage(StatusBar.Panels[1].Text);
+        MenuEnable;
+      end;
+    end;
+     ConnectTime := GetTickCount() - ConnectStartTime;
+     StatusBar.Panels[1].Text:='Чтение 256 analog регистров - ок. (' + IntToStr(ConnectTime) + ' мс)';
+     with SaveDialog do begin
       FilterIndex:=0;
-      FileName := 'AnalogControls-00000_'+'_'+IntToHex(buflen,5)+'.bin';
+      FileName := 'ardata.bin';
       InitialDir := '.';
       DefaultExt := 'bin';
       Filter := 'bin files (*.bin)|*.bin';
@@ -2888,14 +3011,14 @@ begin
         -[ofOldStyleDialog]-[ofOverwritePrompt]+[ofPathMustExist]
         -[ofReadOnly]-[ofShareAware]-[ofShowHelp];
       Title:='Сохранить блок в файл';
-    end;//with
-    if SaveDialog.Execute then begin
+     end;//with
+     if SaveDialog.Execute then begin
       Repaint;
-      bfile := FileCreate(SaveDialog.FileName);
-      if bfile<>INVALID_HANDLE_VALUE then FileWrite(bfile, swdata[ext.pbuf and $ffff], buflen);
+      bfile:=FileCreate(SaveDialog.FileName);
+      if bfile<>INVALID_HANDLE_VALUE then FileWrite(bfile,adata,sizeof(adata));
       FileClose(bfile);
-    end;
-    MenuEnable;
+     end;
+  MenuEnable;
 end;
 
 end.

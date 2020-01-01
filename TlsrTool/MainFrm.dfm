@@ -1,8 +1,8 @@
 object frmMain: TfrmMain
   Left = 1245
   Top = 226
-  Width = 600
-  Height = 379
+  Width = 601
+  Height = 405
   Caption = 'TLSR Tool'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -79,7 +79,7 @@ object frmMain: TfrmMain
   end
   object ButtonLoad: TButton
     Left = 240
-    Top = 152
+    Top = 176
     Width = 65
     Height = 21
     Hint = #1047#1072#1087#1080#1089#1072#1090#1100' SRAM/REG '#1080#1079' '#1092#1072#1081#1083#1072
@@ -91,11 +91,11 @@ object frmMain: TfrmMain
     OnClick = ButtonLoadClick
   end
   object ButtonRdAll: TButton
-    Left = 168
-    Top = 184
+    Left = 8
+    Top = 208
     Width = 81
     Height = 21
-    Hint = #1057#1095#1080#1090#1072#1090#1100' '#1074' '#1092#1072#1081#1083' '#1074#1089#1077' 65536 '#1073#1072#1081#1090' SRAM'
+    Hint = #1057#1095#1080#1090#1072#1090#1100' '#1074#1089#1102' SRAM (65536 '#1073#1072#1081#1090') '#1074' '#1092#1072#1081#1083
     Caption = 'RRead All'
     Enabled = False
     ParentShowHint = False
@@ -105,8 +105,8 @@ object frmMain: TfrmMain
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 318
-    Width = 584
+    Top = 344
+    Width = 585
     Height = 22
     Panels = <
       item
@@ -131,7 +131,7 @@ object frmMain: TfrmMain
   end
   object ButtonWrite: TButton
     Left = 88
-    Top = 184
+    Top = 176
     Width = 65
     Height = 21
     Hint = #1047#1072#1087#1080#1089#1072#1090#1100' SRAM '#1080#1083#1080' '#1088#1077#1075#1080#1089#1090#1088
@@ -147,7 +147,7 @@ object frmMain: TfrmMain
     Top = 152
     Width = 65
     Height = 21
-    Hint = #1055#1088#1086#1095#1080#1090#1072#1090#1100' '#1088#1077#1075#1080#1089#1090#1088
+    Hint = #1055#1088#1086#1095#1080#1090#1072#1090#1100' SRAM '#1080#1083#1080' '#1088#1077#1075#1080#1089#1090#1088
     Caption = 'RRead'
     Enabled = False
     ParentShowHint = False
@@ -157,7 +157,7 @@ object frmMain: TfrmMain
   end
   object EditRegData: TEdit
     Left = 8
-    Top = 184
+    Top = 176
     Width = 73
     Height = 21
     Hint = #1047#1085#1072#1095#1077#1085#1080#1077' SRAM/REG'
@@ -167,7 +167,7 @@ object frmMain: TfrmMain
     Text = '0x00000000'
   end
   object EditLdAddr: TEdit
-    Left = 176
+    Left = 240
     Top = 152
     Width = 57
     Height = 21
@@ -179,7 +179,7 @@ object frmMain: TfrmMain
   end
   object ButtonFWrite: TButton
     Left = 72
-    Top = 248
+    Top = 272
     Width = 65
     Height = 21
     Hint = #1047#1072#1087#1080#1089#1100' Flash '#1080#1079' '#1092#1072#1081#1083#1072
@@ -192,7 +192,7 @@ object frmMain: TfrmMain
   end
   object ButtonChErase: TButton
     Left = 232
-    Top = 288
+    Top = 312
     Width = 73
     Height = 21
     Hint = #1057#1090#1077#1088#1077#1090#1100' '#1074#1089#1102' Flash'
@@ -205,7 +205,7 @@ object frmMain: TfrmMain
   end
   object ButtonFRead: TButton
     Left = 152
-    Top = 216
+    Top = 240
     Width = 65
     Height = 21
     Hint = #1063#1090#1077#1085#1080#1077' Flash '#1074' '#1092#1072#1081#1083
@@ -218,7 +218,7 @@ object frmMain: TfrmMain
   end
   object EditFAddr: TEdit
     Left = 8
-    Top = 216
+    Top = 240
     Width = 57
     Height = 21
     Hint = #1057#1090#1072#1088#1090#1086#1074#1099#1081' '#1072#1076#1088#1077#1089' '#1074' Flash'
@@ -229,7 +229,7 @@ object frmMain: TfrmMain
   end
   object EditFwAddr: TEdit
     Left = 8
-    Top = 248
+    Top = 272
     Width = 57
     Height = 21
     Hint = #1057#1090#1072#1088#1090#1086#1074#1099#1081' '#1072#1076#1088#1077#1089' '#1074' Flash'
@@ -240,7 +240,7 @@ object frmMain: TfrmMain
   end
   object EditFRLen: TEdit
     Left = 72
-    Top = 216
+    Top = 240
     Width = 73
     Height = 21
     Hint = #1056#1072#1079#1084#1077#1088' '#1095#1090#1077#1085#1080#1103' '#1080#1079' Flash'
@@ -364,7 +364,7 @@ object frmMain: TfrmMain
   end
   object ButtonTest: TButton
     Left = 72
-    Top = 280
+    Top = 304
     Width = 65
     Height = 21
     Hint = #1058#1077#1089#1090
@@ -377,7 +377,7 @@ object frmMain: TfrmMain
   end
   object EditFCmd: TEdit
     Left = 8
-    Top = 280
+    Top = 304
     Width = 57
     Height = 21
     Hint = #1050#1086#1084#1072#1085#1076#1072' '#1082' Flash'
@@ -412,7 +412,7 @@ object frmMain: TfrmMain
   end
   object ButtonSectorErase: TButton
     Left = 232
-    Top = 264
+    Top = 288
     Width = 73
     Height = 21
     Hint = #1057#1090#1077#1088#1077#1090#1100' '#1089#1077#1082#1090#1086#1088' Flash'
@@ -425,7 +425,7 @@ object frmMain: TfrmMain
   end
   object CheckBoxFSEEna: TCheckBox
     Left = 152
-    Top = 250
+    Top = 274
     Width = 73
     Height = 17
     Hint = #1057#1090#1080#1088#1072#1090#1100' '#1089#1077#1082#1090#1086#1088#1072' Flash '#1087#1088#1080' '#1079#1072#1087#1080#1089#1080
@@ -438,7 +438,7 @@ object frmMain: TfrmMain
   end
   object ButtonFFRead: TButton
     Left = 232
-    Top = 216
+    Top = 240
     Width = 73
     Height = 37
     Hint = #1063#1090#1077#1085#1080#1077' Flash '#1095#1077#1088#1077#1079' FLoader (FastFlashRead)'
@@ -463,7 +463,7 @@ object frmMain: TfrmMain
   end
   object ButtonSFWrite: TButton
     Left = 152
-    Top = 272
+    Top = 296
     Width = 73
     Height = 41
     Hint = #1047#1072#1087#1080#1089#1100' Flash '#1080#1079' '#1092#1072#1081#1083#1072' '#1095#1077#1088#1077#1079' FLoader (FastFlashWrite)'
@@ -858,17 +858,16 @@ object frmMain: TfrmMain
     OnClick = ButtonRSTOffClick
   end
   object ButtonAnaRead: TButton
-    Left = 504
-    Top = 264
+    Left = 160
+    Top = 152
     Width = 65
     Height = 21
-    Hint = #1055#1088#1086#1095#1080#1090#1072#1090#1100' '#1088#1077#1075#1080#1089#1090#1088#1099' analog controls'
-    Caption = 'AnaRead'
+    Hint = #1055#1088#1086#1095#1080#1090#1072#1090#1100' '#1088#1077#1075#1080#1089#1090#1088' analog controls'
+    Caption = 'ARead'
     Enabled = False
     ParentShowHint = False
     ShowHint = True
     TabOrder = 37
-    Visible = False
     OnClick = ButtonAnaReadClick
   end
   object EditSTMSpeed: TEdit
@@ -883,6 +882,32 @@ object frmMain: TfrmMain
     ShowHint = True
     TabOrder = 38
     Text = '2'
+  end
+  object ButtonAWrite: TButton
+    Left = 160
+    Top = 176
+    Width = 65
+    Height = 21
+    Hint = #1047#1072#1087#1080#1089#1072#1090#1100' '#1088#1077#1075#1080#1089#1090#1088' analog controls'
+    Caption = 'AWrite'
+    Enabled = False
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 39
+    OnClick = ButtonAWriteClick
+  end
+  object ButtonARdAll: TButton
+    Left = 104
+    Top = 208
+    Width = 81
+    Height = 21
+    Hint = #1057#1095#1080#1090#1072#1090#1100' '#1074#1089#1077' 256 analog '#1088#1077#1075#1080#1089#1090#1088#1086#1074' '#1074' '#1092#1072#1081#1083
+    Caption = 'ARead All'
+    Enabled = False
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 40
+    OnClick = ButtonARdAllClick
   end
   object SaveDialog: TSaveDialog
     Left = 576

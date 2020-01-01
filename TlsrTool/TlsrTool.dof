@@ -115,7 +115,7 @@ AutoIncBuild=0
 MajorVer=0
 MinorVer=0
 Release=1
-Build=3
+Build=4
 Debug=0
 PreRelease=0
 Special=0
@@ -126,13 +126,13 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=PapuaSoft & PapuaHard
 FileDescription=
-FileVersion=0.0.1.3
+FileVersion=0.0.1.4
 InternalName=
 LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=
-ProductVersion=0.0.0.1
+ProductVersion=0.0.0.2
 Comments=
 [Excluded Packages]
 c:\program files (x86)\borland\delphi7\Bin\dcltee70.bpl=TeeChart Components
