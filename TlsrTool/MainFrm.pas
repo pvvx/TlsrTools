@@ -152,6 +152,8 @@ type
     function StmCmdByte(cmd : byte; data: byte) : boolean;
     function StmCmdWord(cmd : byte; data: word) : boolean;
     function StmCmdPDword(cmd : Byte; pdata : pDword) : boolean;
+    function StmCmdSetSCS(addr : Dword; data: byte) : boolean;
+    function StmCmdSetSRC(addr : Dword) : boolean;
     function StmCmdActivate : boolean;
     function StmCmdVersion : boolean;
     function StmRdRegs : boolean;
@@ -609,7 +611,15 @@ begin
           SigBreak := False;
           flgReadGpioOn := False;
           PurgeCom(PURGE_TXCLEAR or PURGE_RXCLEAR);
-          if StmCmdVersion then StmRdRegs;
+          if StmCmdVersion then begin
+            StmRdRegs;
+            if(stm.ver > 5) then begin
+              if not StmCmdByte(8, 3) then begin
+                StatusBar.Panels[1].Text:='Ошибка установоки конфигурации!';
+                ShowMessage(StatusBar.Panels[1].Text);
+              end;
+            end;
+          end;
           flgReadGpioOn := True;
       end
        else begin
@@ -1378,7 +1388,6 @@ begin
 
     GetVarSpeedSwmSws;
 
-
     if cnt > 0 then begin
       if not StmCmd(0) then begin
         StatusBar.Panels[1].Text:='Ошибка команды сброса CPU!';
@@ -1389,6 +1398,15 @@ begin
       sleep(10);
       StmCmdVersion;
       Application.ProcessMessages;
+
+      if stm.ver > 5 then begin
+        if ( // (not StmCmdByte(8, 3)) or
+        (not StmCmdSetSCS($0602, $05)) or (not StmCmdSetSRC($00B2))) then begin
+          StatusBar.Panels[1].Text:='Ошибка установоки конфигурации!';
+          ShowMessage(StatusBar.Panels[1].Text);
+          exit;
+        end;
+      end;
 
       temp_speed_stm := 3;
       if not StmCmdByte(5, temp_speed_stm) then begin
@@ -1409,18 +1427,18 @@ begin
       buftx[2] := asteps shr 8;
       buftx[3] := asteps;
       if not WriteCom(@buftx, 4) then begin
-         StatusBar.Panels[1].Text:='Ошибка записи в '+ sComNane+'!';
-         ShowMessage(StatusBar.Panels[1].Text);
-         exit;
+        StatusBar.Panels[1].Text:='Ошибка записи в '+ sComNane+'!';
+        ShowMessage(StatusBar.Panels[1].Text);
+        exit;
       end;
 
-      sleep(cnt);
+      if cnt > 0 then sleep(cnt);
       //  0  1  2  3  4  5  6  7  8  9  10 11
-       // 02 5A 00 00 00 B2 00 80 00 05 02 FF
+      // 02 5A 00 00 00 B2 00 80 00 05 02 FF
       if not ReadCom(@bufrx, 12) then begin
-         StatusBar.Panels[1].Text:='Таймаут устройства на '+ sComNane+'!';
-         ShowMessage(StatusBar.Panels[1].Text);
-         exit;
+        StatusBar.Panels[1].Text:='Таймаут устройства на '+ sComNane+'!';
+        ShowMessage(StatusBar.Panels[1].Text);
+        exit;
       end;
     end
     else begin
@@ -1555,7 +1573,6 @@ begin
 //         ShowMessage(StatusBar.Panels[1].Text);
          LabelStm.Caption := 'Device not found';
          PurgeCom(PURGE_TXCLEAR or PURGE_RXCLEAR);
-
          exit;
      end;
      Application.ProcessMessages;
@@ -1731,6 +1748,78 @@ begin
      end;
      Application.ProcessMessages;
      if not ReadCom(@bufrx, 3) then begin
+        StatusBar.Panels[1].Text:='Ошибка чтения в '+ sComNane+'!';
+        ShowMessage(StatusBar.Panels[1].Text);
+       exit;
+     end;
+     if (bufrx[0] <> buftx[0])
+     and (bufrx[1] <> buftx[1])
+     and (bufrx[2] <> buftx[2]) then begin
+        StatusBar.Panels[1].Text:='Не то устройство на '+ sComNane+'!';
+        ShowMessage(StatusBar.Panels[1].Text);
+        exit;
+     end;
+     result := True;
+end;
+
+function TfrmMain.StmCmdSetSCS(addr : Dword; data: byte) : boolean;
+var
+buftx : array [0..9] of byte;
+bufrx : array [0..9] of byte;
+begin
+     result := False;
+     buftx[0] := $55;
+     buftx[1] := 6;
+     buftx[2] := $5a;
+     buftx[3] := addr shr 8;
+     buftx[4] := addr;
+     buftx[5] := 0;
+     buftx[6] := data;
+     buftx[7] := $ff;
+     buftx[8] := $ff;
+     if not WriteCom(@buftx, 9) then begin
+       StatusBar.Panels[1].Text:='Ошибка записи в '+ sComNane+'!';
+       ShowMessage(StatusBar.Panels[1].Text);
+       exit;
+     end;
+     Application.ProcessMessages;
+     if not ReadCom(@bufrx, 9) then begin
+       StatusBar.Panels[1].Text:='Ошибка чтения в '+ sComNane+'!';
+       ShowMessage(StatusBar.Panels[1].Text);
+       exit;
+     end;
+     if (bufrx[0] <> buftx[0])
+     and (bufrx[1] <> buftx[1])
+     and (bufrx[2] <> buftx[2]) then begin
+        StatusBar.Panels[1].Text:='Не то устройство на '+ sComNane+'!';
+        ShowMessage(StatusBar.Panels[1].Text);
+        exit;
+     end;
+     result := True;
+end;
+
+function TfrmMain.StmCmdSetSRC(addr : Dword) : boolean;
+var
+buftx : array [0..9] of byte;
+bufrx : array [0..9] of byte;
+begin
+     result := False;
+     buftx[0] := $55;
+     buftx[1] := 7;
+     buftx[2] := $5a;
+     buftx[3] := addr shr 8;
+     buftx[4] := addr;
+     buftx[5] := $80;
+     buftx[6] := $ff;
+     buftx[7] := $ff;
+     buftx[8] := $ff;
+     if not WriteCom(@buftx, 9) then begin
+         StatusBar.Panels[1].Text:='Ошибка записи в '+ sComNane+'!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         exit;
+     end;
+     Application.ProcessMessages;
+     if not ReadCom(@bufrx, 9) then begin
         StatusBar.Panels[1].Text:='Ошибка чтения в '+ sComNane+'!';
         ShowMessage(StatusBar.Panels[1].Text);
        exit;

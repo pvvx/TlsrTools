@@ -16,6 +16,8 @@ speed:
 */
 void SPIInit(uint8_t speed);
 void SPI_tx_rx(uint8_t *data_tx, uint8_t *data_rx, uint16_t len);
+void SPI_Send(uint8_t *data, uint16_t len);
+
 extern volatile uint8_t spi_ready;
 
 #endif // _SPI_DMA_H_

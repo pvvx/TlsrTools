@@ -86,6 +86,10 @@ uint32_t spi_txlen = 0;
 uint32_t spi_txlen_tst = 0;
 uint16_t tst_cnt = 0;
 
+uint8_t sw_cmd_len = 3; 
+uint8_t sw_cpu_stop[7]   = { 0x5a, 0x06, 0x02, 0x00, 0x05, 0xff, 0xff };
+uint8_t sw_reg_clkdiv[7] = { 0x5a, 0x00, 0xb2, 0x80, 0xff, 0xff, 0xff };
+
 uint8_t spi_rx_buf[SPI_RXTX_DATA_SIZE];
 uint8_t spi_tx_buf[SPI_RXTX_DATA_SIZE];  
 uint16_t swbuf(uint8_t *swdata, uint8_t *data, uint16_t len);
@@ -365,7 +369,12 @@ Swire Bit:
 */
 #define SW_SPI_BITS 7
 #define SW_SPI_BITS_TST 4
+#define SET_SW_BPAUSE 0 // 1.. or 0	
+#if SET_SW_BPAUSE
+#define SW_MAX_BUF_BITS (64*10*SW_SPI_BITS + 64*SET_SW_BPAUSE)	// 4928
+#else
 #define SW_MAX_BUF_BITS (64*10*SW_SPI_BITS)	// 4480
+#endif
 #define SW_MAX_BUF  (SW_MAX_BUF_BITS/8 + 2) // 560 + 2
 #if SPI_RXTX_DATA_SIZE < SW_MAX_BUF
 #error Low APP_TX_DATA_SIZE!
@@ -383,6 +392,7 @@ uint32_t slbSbit(uint32_t sl, uint8_t *ptr, uint8_t bit) {
 		setbit(sl+2, ptr);
 		setbit(sl+3, ptr);
 		setbit(sl+4, ptr);
+//		setbit(sl+5, ptr);
 	}
 	return sl + SW_SPI_BITS;
 }
@@ -395,12 +405,22 @@ uint16_t swbuf(uint8_t *swdata, uint8_t *data, uint16_t len) {
 		memset(swdata, 0, SW_MAX_BUF );
 #else
 		memset(swdata, 0xff, SW_MAX_BUF);
+#endif	
+#if 0		
+		swdata[0] = 0;
+		swdata[1] = 0;
+		sl = SW_SPI_BITS*20;
+		for(i = 0; i < 9; i++) sl = slbSbit(sl, swdata, 1);
+		sl = slbSbit(sl, swdata, 0);
+#if SET_SW_BPAUSE
+		sl += SET_SW_BPAUSE;
+#endif			
 #endif		
 		for(i = 0; i < len; i++) {
 			// старт бит cmd, для данных = "0", для START и END = "1"
 			sl = slbSbit(sl, swdata, i == 0 || i == len-1); // START и END байты с битом cmd = "1" 
 			// будет чтение (бит 7 в RW_ID = "1") ?
-			if(rd_flag && i != len-1) {
+			if(i != len-1 && rd_flag) {
 				// старт (cmd = "0") чтения 8 бит + bit end (итого 10 бит)
 				sl += 9*SW_SPI_BITS;
 			}
@@ -413,8 +433,11 @@ uint16_t swbuf(uint8_t *swdata, uint8_t *data, uint16_t len) {
 				// bit end
 				sl = slbSbit(sl, swdata, 0);
 			}
-			if(i == 3 && (data[3] & 0x80)) 
+			if(i == sw_cmd_len && (data[sw_cmd_len] & 0x80))
 				rd_flag = 1;
+#if SET_SW_BPAUSE
+			sl += SET_SW_BPAUSE;
+#endif			
 		}
 	}
 	return ((sl+7)>>3)+1;
@@ -459,10 +482,6 @@ int swdecode(uint8_t *data, uint8_t *swdata, uint8_t len) {
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the opeartion: USBD_OK if all operations are OK else USBD_FAIL
   */
-static uint8_t sw_cpu_stop[6]   = { 0x5a, 0x06, 0x02, 0x00, 0x05, 0xff };
-// #define reg_swire_clk_div		REG_ADDR8(0xb2)
-static uint8_t sw_reg_clkdiv[6] = { 0x5a, 0x00, 0xb2, 0x80, 0xff, 0xff };
-
 static int8_t CDC_Itf_Receive(uint8_t* Buf, uint32_t *Len)
 {
   uint32_t reg;
@@ -478,18 +497,25 @@ static int8_t CDC_Itf_Receive(uint8_t* Buf, uint32_t *Len)
 		  switch(Buf[1]) {
 			case 0: // Pull RST pin to GND 
 				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+				// PA7 -> SPI SDO Open Drain
+				GPIOA->CRL |= 0x03U<<GPIO_CRL_CNF7_Pos;
 			    spi_rxlen = 2;
 				break;
 			case 1: // Release pin RST
 				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+				// PA7 -> SPI SPI SDO PushPull
+				GPIOA->CRL = (GPIOA->CRL & (~(0x03U<<GPIO_CRL_CNF7_Pos))) | (0x02U<<GPIO_CRL_CNF7_Pos);
 			    spi_rxlen = 2;
 				break;
 			case 2: // Function 'Activate'
 			    if (spi_rxlen == 4) {
 					tst_cnt = (Buf[2]<<8) | Buf[3];
 					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-					spi_txlen = swbuf(spi_tx_buf, sw_cpu_stop, sizeof(sw_cpu_stop));
-					spi_txlen_tst = swbuf(&spi_tx_buf[spi_txlen], sw_reg_clkdiv, sizeof(sw_reg_clkdiv));
+					// PA7 -> SPI SPI SDO PushPull
+					GPIOA->CRL = (GPIOA->CRL & (~(0x03U<<GPIO_CRL_CNF7_Pos))) | (0x02U<<GPIO_CRL_CNF7_Pos);
+					spi_rxlen = sw_cmd_len + 3;
+					spi_txlen = swbuf(spi_tx_buf, sw_cpu_stop, spi_rxlen);
+					spi_txlen_tst = swbuf(&spi_tx_buf[spi_txlen], sw_reg_clkdiv, spi_rxlen);
 					SPI_tx_rx(spi_tx_buf, spi_rx_buf, spi_txlen);
 					spi_rxlen = 0;
 				}
@@ -501,7 +527,7 @@ static int8_t CDC_Itf_Receive(uint8_t* Buf, uint32_t *Len)
 				break;
 			case 4: // Get version && GPIO
 				Buf[2] = 0x00; // version hi
-				Buf[3] = 0x02; // version lo
+				Buf[3] = 0x06; // version lo
 				reg = GPIOA->IDR;
 				Buf[4] = reg >> 8;	// PA8..15
 				Buf[5] = reg;		// PA0..7
@@ -517,6 +543,34 @@ static int8_t CDC_Itf_Receive(uint8_t* Buf, uint32_t *Len)
 				if (spi_rxlen == 3) {
 					Buf[2] &= 7;
 					SPIInit(Buf[2]);
+					spi_rxlen = 3;
+				} else spi_rxlen = 0;
+				break;
+			case 6: // Set sw_cpu_stop
+				if (spi_rxlen == sizeof(sw_cpu_stop) + 2) {
+					memcpy(sw_cpu_stop, &Buf[2], spi_rxlen);
+//					spi_rxlen = 0;
+				} else if(spi_rxlen == 2) {
+					memcpy(&Buf[2], sw_cpu_stop, sizeof(sw_cpu_stop));
+					spi_rxlen = sizeof(sw_cpu_stop) + 2;
+				}
+				break;
+			case 7: // Set sw_reg_clkdiv
+				if (spi_rxlen == sizeof(sw_reg_clkdiv) + 2) {
+					memcpy(sw_reg_clkdiv, &Buf[2], spi_rxlen);
+//					spi_rxlen = 0;
+				} else if(spi_rxlen == 2) {
+					memcpy(&Buf[2], sw_reg_clkdiv, sizeof(sw_reg_clkdiv));
+					spi_rxlen = sizeof(sw_reg_clkdiv) + 2;
+				}
+				break;
+			case 8:	// Set sw_cmd_len
+				if (spi_rxlen == 3) {
+					if(Buf[2] == 4)	sw_cmd_len = 4;
+					else sw_cmd_len = 3;
+					spi_rxlen = 3;
+				} else if(spi_rxlen == 2) {
+					Buf[2] = sw_cmd_len;
 					spi_rxlen = 3;
 				}
 				break;
@@ -616,7 +670,7 @@ static int8_t CDC_Itf_Receive(uint8_t* Buf, uint32_t *Len)
 		  }
 	  }
 	  else {
-		spi_txlen = 0;  
+		spi_txlen = 0;
 		SPI_tx_rx(spi_tx_buf, spi_rx_buf, swbuf(spi_tx_buf, Buf, spi_rxlen));
 	  }
   }
@@ -776,8 +830,9 @@ void SPI_RxCallback(void)
 	  }
 	  else if(spi_txlen_tst) {
 		SPI_tx_rx(&spi_tx_buf[spi_txlen], spi_rx_buf, spi_txlen_tst);
-		spi_txlen = 0;  
-	    spi_rxlen = sizeof(sw_reg_clkdiv);
+		spi_txlen = 0;
+//	    spi_rxlen = spi_txlen_tst;
+	    spi_rxlen = sw_cmd_len + 3;
 	  }
   }
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
