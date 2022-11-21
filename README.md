@@ -2,10 +2,12 @@
 Alternative programmer for Telink TLSR826x on STM32F103C8T6.
 
 # Telink SWIRE protocol when programming E104-BT10-x modules
-![SCH](https://github.com/pvvx/TlsrTools/blob/master/Stm32miniSwireShm.gif)
+![Stm32miniSwireShm.gif](https://github.com/pvvx/TlsrTools/blob/master/Stm32miniSwireShm.gif)
 
 # Programming JDY-10 Modules...
-![SCH](https://github.com/pvvx/TlsrTools/blob/master/TlsrTool_JDY-10.gif)
+![TlsrTool_JDY-10.gif](https://github.com/pvvx/TlsrTools/blob/master/TlsrTool_JDY-10.gif)
+
+![USBCDC.png](https://github.com/pvvx/TlsrTools/blob/master/USBCDC.png)
 
 [Документация на русском языке](https://github.com/pvvx/TlsrTools/blob/master/DOCs)
 
