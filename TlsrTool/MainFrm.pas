@@ -14,6 +14,7 @@ const
 	FLASH_READ_CMD			=	$03;
 	FLASH_WRITE_ENABLE_CMD 	= 	$06;
 	FLASH_WRITE_DISABLE_CMD = 	$04;
+	FLASH_WRITE_STATUS_CMD	=	$01;
 	FLASH_READ_STATUS_CMD	=	$05;
 	FLASH_SECT_ERASE_CMD	=	$20;
 	FLASH_BLK_ERASE_CMD		=	$D8;
@@ -168,6 +169,7 @@ type
     function SwireWrite(Addr: Dword; Data: Dword; DataLen: Dword) : boolean;
     function SwireWrBuf(Addr: Dword; Buf: Pointer; DataLen: Dword) : boolean;
     function SwireGetStatusFlash : Dword;
+    function SwireFlashWriteStatus(fsta: Byte) : boolean;
     function SwireFlashWriteEnable : boolean;
     function StartFLoader : boolean;
     function CommandFLoader : boolean;
@@ -1085,6 +1087,15 @@ begin
     result := SwireWrite( $0d, $01, 1);
 end;
 
+function TfrmMain.SwireFlashWriteStatus(fsta: Byte) : boolean;
+begin
+    SwireWrite( $0d, $00, 1); // set csn low
+    SwireWrite( $0c, FLASH_WRITE_STATUS_CMD, 1); // send Write Status command
+    SwireWrite( $0c, fsta, 1);
+    // set csn high
+    result := SwireWrite( $0d, $01, 1);
+end;
+
 procedure TfrmMain.ButtonFWriteClick(Sender: TObject);
 var
   F : File;
@@ -1182,9 +1193,17 @@ begin
             i := 0;
             while(True) do begin
               x := SwireGetStatusFlash;
-              if ((x and $100) = 0)
-               and ((x and $01) = 0) then
-                break;
+              if ((x and $100) = 0) then begin
+                if ((x and $1c) = 0) then begin
+                 if ((x and $01) = 0) then break;
+                end
+                else begin
+                 StatusBar.Panels[1].Text:='Ошибка стирания сектора Flash по адресу 0x'+ IntToHex(old_sec_erase, 5)+'(FlashStatus 0x'+IntToHex(x, 2)+')!';
+                 ShowMessage(StatusBar.Panels[1].Text);
+                 MenuEnable;
+                 exit;
+                end;
+              end;
               Inc(i);
               if (i > 33) // tests = ~ 7
               or ((x and $100) <> 0) then begin
@@ -1233,6 +1252,18 @@ begin
 
     StatusBar.Panels[1].Text:='Erase All Flash...';
 
+    if not SwireFlashWriteStatus($02) then begin
+         StatusBar.Panels[1].Text:='Ошибка записи регистра status Flash!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
+    end;
+    if (not SwireFlashWriteEnable) then begin
+         StatusBar.Panels[1].Text:='Ошибка инициализции стирания Flash: Нет связи по swire!';
+         ShowMessage(StatusBar.Panels[1].Text);
+         MenuEnable;
+         exit;
+    end;
     // set csn high
     if not SwireFlashChipErase then begin
          StatusBar.Panels[1].Text:='Ошибка стирания Flash!';
@@ -1244,13 +1275,21 @@ begin
     while(True) do begin
       sleep(100);
       x := SwireGetStatusFlash;
-      if ((x and $100) = 0)
-       and ((x and $01) = 0) then
-        break;
+      if ((x and $100) = 0) then begin
+        if ((x and $1c) = 0) then begin
+          if ((x and $01) = 0) then break;
+        end
+        else begin
+          StatusBar.Panels[1].Text:='Ошибка стирания Flash, FlashStatus: 0x'+ IntToHex(x, 2)+'!';
+          ShowMessage(StatusBar.Panels[1].Text);
+          MenuEnable;
+          exit;
+        end;
+      end;
       Inc(i);
       if (i > 45)
        or ((x and $100) <> 0) then begin
-        StatusBar.Panels[1].Text:='Ошибка стирания сектора Flash по адресу 0x'+ IntToHex(old_sec_erase, 5)+'!';
+        StatusBar.Panels[1].Text:='Ошибка стирания Flash, FlashStatus: 0x'+ IntToHex(x, 2)+'!';
         ShowMessage(StatusBar.Panels[1].Text);
         MenuEnable;
         exit;
